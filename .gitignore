@@ -1,26 +1,36 @@
-# Environment variables
+# Environment
 .env
-.env.local
+*.env
 
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
+*.pyo
+*.pyd
 .Python
 *.egg-info/
 dist/
 build/
+*.egg
+.eggs/
 
-# Vector Database
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# ChromaDB (local vector database - do not commit)
 chroma_db/
+
+# Data files (optional - remove if you want to commit sample data)
+# data/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
@@ -28,8 +38,3 @@ Thumbs.db
 
 # Logs
 *.log
-
-# Temporary files
-*.tmp
-temp/
-tmp/
