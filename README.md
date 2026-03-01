@@ -16,102 +16,153 @@ AI-powered document Q&A system. Upload documents, ask questions, get cited answe
 
 ## 🏗️ System Architecture
 
-```mermaid
-graph TB
-    subgraph "User Interface"
-        A1[Streamlit UI<br/>Port 8501]
-        A2[FastAPI + Frontend<br/>Port 8000]
-        A3[👤 User]
-    end
-
-    subgraph "RAG Pipeline"
-        B1[📄 Ingestion<br/>PDF/MD/URL Loader]
-        B2[✂️ Chunker<br/>600 tokens]
-        B3[🔢 Embedder<br/>Gemini 768-dim]
-        B4[💾 Vector Store<br/>ChromaDB]
-        B5[🔍 Retriever<br/>Top-K Search]
-        B6[✨ Generator<br/>Gemini 2.5 Flash]
-    end
-
-    subgraph "Storage & APIs"
-        C1[(ChromaDB<br/>./chroma_db/)]
-        C2[🤖 Google Gemini API]
-        C3[📁 Data Folder]
-    end
-
-    A3 --> A1
-    A3 --> A2
-    A1 --> B1
-    A2 --> B1
-
-    B1 --> B2 --> B3 --> B4
-    B4 --> B5 --> B6
-
-    B3 -.-> C2
-    B4 -.-> C1
-    B6 -.-> C2
-    B1 -.-> C3
-
-    style A1 fill:#b1ddf0
-    style A2 fill:#b1ddf0
-    style B1 fill:#ffe6cc
-    style B2 fill:#ffe6cc
-    style B3 fill:#ffe6cc
-    style B4 fill:#ffe6cc
-    style B5 fill:#ffe6cc
-    style B6 fill:#ffe6cc
-    style C1 fill:#d5e8d4
-    style C2 fill:#d5e8d4
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          USER INTERFACE                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│   [Streamlit UI]          OR          [FastAPI + Frontend]           │
+│   Port: 8501                          Port: 8000                     │
+│                                                                       │
+└────────────────────────────┬──────────────────────────────────────────┘
+                             │
+┌─────────────────────────────────────────────────────────────────────┐
+│                          RAG PIPELINE                                │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  [Ingestion] → [Chunker] → [Embedder] → [Vector Store]              │
+│  PDF/MD/URL    600 tokens   Gemini API   ChromaDB                   │
+│                100 overlap  768-dim                                  │
+│                                                                       │
+│                            ↓                                         │
+│                                                                       │
+│  [Retriever] → [Generator]                                           │
+│  Top-K Search  Gemini 2.5 Flash                                     │
+│                                                                       │
+└────────────────────────────┬──────────────────────────────────────────┘
+                             │
+┌─────────────────────────────────────────────────────────────────────┐
+│                    STORAGE & EXTERNAL SERVICES                       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  [ChromaDB]         [Google Gemini API]         [Data Folder]       │
+│  ./chroma_db/       Embeddings + Generation     ./data/             │
+│  Persistent         768-dim vectors             Source Files         │
+│                                                                       │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📊 Data Flow
+## 📊 Data Flow Diagrams
 
 ### 1️⃣ Document Ingestion Flow
 
-```mermaid
-flowchart LR
-    A[📕 Document<br/>PDF/MD/TXT/URL] --> B[📄 Extract Text<br/>with metadata]
-    B --> C[✂️ Chunk<br/>600 tokens<br/>100 overlap]
-    C --> D[🔢 Embed<br/>Gemini API<br/>768 dimensions]
-    D --> E[(💾 Store<br/>ChromaDB)]
-
-    style A fill:#fff2cc
-    style B fill:#ffe6cc
-    style C fill:#fffacd
-    style D fill:#f3e5f5
-    style E fill:#d5e8d4
 ```
+┌──────────────┐
+│   Document   │  (PDF / Markdown / TXT / Web URL)
+│  📕 📝 📄 🌐 │
+└──────┬───────┘
+       │
+       ▼
+┌─────────────────────────┐
+│  📄 Text Extraction     │
+│  ─────────────────────  │
+│  • PyMuPDF for PDF      │
+│  • BeautifulSoup for URL│
+│  • Preserve metadata    │
+└──────────┬──────────────┘
+           │
+           ▼
+┌─────────────────────────┐
+│  ✂️  Text Chunking      │
+│  ─────────────────────  │
+│  • 600 tokens/chunk     │
+│  • 100 token overlap    │
+│  • tiktoken (cl100k)    │
+└──────────┬──────────────┘
+           │
+           ▼
+┌─────────────────────────┐
+│  🔢 Embedding           │
+│  ─────────────────────  │
+│  • Gemini API call      │
+│  • 768 dimensions       │
+│  • Batch processing     │
+└──────────┬──────────────┘
+           │
+           ▼
+┌─────────────────────────┐
+│  💾 Store in ChromaDB   │
+│  ─────────────────────  │
+│  • Cosine similarity    │
+│  • Persistent storage   │
+│  • Ready for retrieval  │
+└─────────────────────────┘
 
-**Time**: ~5-10s for 10-page PDF
+⏱️  Time: ~5-10 seconds for 10-page PDF
+```
 
 ---
 
 ### 2️⃣ Query Processing Flow
 
-```mermaid
-flowchart TB
-    A[💬 User Question] --> B[🔢 Embed Query<br/>Gemini API]
-    B --> C[🔍 Search ChromaDB<br/>Cosine Similarity]
-    C --> D[📄 Retrieve Top-K Chunks<br/>Default: 5]
-    D --> E[📋 Build Context<br/>Query + Chunks + History]
-    E --> F[✨ Generate Answer<br/>Gemini 2.5 Flash]
-    F --> G[💬 Response with<br/>[N] Citations]
-
-    H[💭 Conversation<br/>History] -.-> E
-
-    style A fill:#cfe2f3
-    style B fill:#fffacd
-    style C fill:#f3e5f5
-    style D fill:#fff4e6
-    style E fill:#fff4e6
-    style F fill:#e8f5e9
-    style G fill:#cfe2f3
-    style H fill:#e1d5e7
 ```
+┌─────────────────────────┐
+│  💬 User Question       │
+│  "What is counselling?" │
+└──────────┬──────────────┘
+           │
+           ├─────────────────────────┐
+           │                         │
+           ▼                         ▼
+┌──────────────────────┐   ┌─────────────────┐
+│  🔢 Embed Query      │   │ 💭 Conversation │
+│  Gemini API          │   │    History      │
+│  768-dim vector      │   │  (Last 10 turns)│
+└──────────┬───────────┘   └────────┬────────┘
+           │                        │
+           ▼                        │
+┌──────────────────────┐            │
+│  🔍 Search ChromaDB  │            │
+│  Cosine Similarity   │            │
+│  Retrieve Top-K=5    │            │
+└──────────┬───────────┘            │
+           │                        │
+           ▼                        │
+┌──────────────────────┐            │
+│  📄 Top 5 Chunks     │            │
+│  Ranked by relevance │            │
+└──────────┬───────────┘            │
+           │                        │
+           └────────┬───────────────┘
+                    │
+                    ▼
+           ┌────────────────────┐
+           │  📋 Build Context  │
+           │  Query + Chunks +  │
+           │     History        │
+           └─────────┬──────────┘
+                     │
+                     ▼
+           ┌────────────────────┐
+           │  ✨ Generate       │
+           │  Gemini 2.5 Flash  │
+           │  With citations    │
+           └─────────┬──────────┘
+                     │
+                     ▼
+           ┌────────────────────┐
+           │  💬 AI Response    │
+           │  "Counselling is   │
+           │   [1] ... [2] ..." │
+           │                    │
+           │  📚 Sources: [1]   │
+           │  doc.pdf page 3    │
+           └────────────────────┘
 
-**Time**: ~3-4s per query
+⏱️  Time: ~3-4 seconds per query
+```
 
 ---
 
@@ -130,7 +181,7 @@ Create/edit `.env`:
 GOOGLE_API_KEY=your_api_key_here
 ```
 
-🔑 Get free key: [Google AI Studio](https://aistudio.google.com)
+🔑 Get free key: https://aistudio.google.com
 
 ### 3. Run Application
 
@@ -159,12 +210,13 @@ uvicorn server:app --reload --port 8000
 
 ```
 RAG_Drive/
+│
 ├── app.py                 # Streamlit UI
 ├── server.py             # FastAPI backend
-├── requirements.txt      # Dependencies
-├── .env                  # API keys (SECRET)
+├── requirements.txt      # Python dependencies
+├── .env                  # API keys (SECRET - DO NOT COMMIT)
 │
-├── rag/                  # Core modules
+├── rag/                  # Core RAG modules
 │   ├── ingestion.py      # Load PDF/MD/URL
 │   ├── chunker.py        # Split text (tiktoken)
 │   ├── embedder.py       # Gemini embeddings
@@ -172,39 +224,48 @@ RAG_Drive/
 │   ├── retriever.py      # Semantic search
 │   └── generator.py      # Answer generation
 │
-├── static/               # Frontend (FastAPI)
+├── static/               # Frontend assets (FastAPI)
 │   ├── index.html
 │   ├── app.js
 │   └── style.css
 │
-├── data/                 # Place documents here
-└── chroma_db/           # Vector database
+├── data/                 # Place your documents here
+└── chroma_db/           # Vector database (auto-created)
 ```
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Component | Technology |
-|-----------|-----------|
-| **Backend** | Python 3.11+, FastAPI, Streamlit |
-| **Vector DB** | ChromaDB (local, persistent) |
-| **Embeddings** | Google Gemini (768-dim) |
-| **LLM** | Google Gemini 2.5 Flash |
-| **PDF Parser** | PyMuPDF + pypdf |
-| **Chunking** | tiktoken (cl100k_base) |
+```
+┌─────────────────────────────────────────────────────────┐
+│  Backend       │  Python 3.11+, FastAPI, Streamlit      │
+├─────────────────────────────────────────────────────────┤
+│  Vector DB     │  ChromaDB 0.5+ (local, persistent)     │
+├─────────────────────────────────────────────────────────┤
+│  Embeddings    │  Google Gemini (768 dimensions)        │
+├─────────────────────────────────────────────────────────┤
+│  LLM           │  Google Gemini 2.5 Flash               │
+├─────────────────────────────────────────────────────────┤
+│  PDF Parser    │  PyMuPDF + pypdf (fallback)            │
+├─────────────────────────────────────────────────────────┤
+│  Chunking      │  tiktoken (cl100k_base)                │
+└─────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 🌐 API Reference (FastAPI)
+## 🌐 API Endpoints (FastAPI)
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/status` | GET | Get chunk count |
-| `/api/chat` | POST | Send message, get answer |
-| `/api/ingest/file` | POST | Upload file |
-| `/api/ingest/url` | POST | Ingest URL |
-| `/api/clear` | POST | Clear all data |
+```
+GET    /api/status              → Get chunk count
+GET    /api/files               → List data/ folder files
+POST   /api/chat                → Send message, get answer
+POST   /api/ingest/file         → Upload & ingest file
+POST   /api/ingest/url          → Ingest from web URL
+POST   /api/ingest/datafile     → Ingest from data/ folder
+POST   /api/clear               → Clear all data
+```
 
 **Example**:
 ```bash
@@ -236,66 +297,112 @@ CHUNK_OVERLAP = 100     # overlap between chunks
 
 ---
 
-## ⚡ Performance
+## ⚡ Performance Metrics
 
-| Operation | Time |
-|-----------|------|
-| PDF Ingestion (10 pages) | ~5-10s |
-| Query Processing | ~3-4s |
-| Vector Search | ~0.5s |
-| Answer Generation | ~2-3s |
+```
+┌──────────────────────────────────────┬──────────────┐
+│  Operation                           │  Time        │
+├──────────────────────────────────────┼──────────────┤
+│  PDF Ingestion (10 pages)            │  ~5-10s      │
+│  Query Embedding                     │  ~0.5s       │
+│  Vector Search (ChromaDB)            │  ~0.3s       │
+│  Answer Generation (Gemini)          │  ~2-3s       │
+├──────────────────────────────────────┼──────────────┤
+│  Total Query Time                    │  ~3-4s       │
+└──────────────────────────────────────┴──────────────┘
 
-**Capacity**: Unlimited documents (disk-limited), millions of chunks
+Capacity:
+  • Documents: Unlimited (disk-limited)
+  • Chunks: Millions (ChromaDB handles it efficiently)
+  • Conversation History: Last 10 turns in memory
+```
 
 ---
 
 ## 🐛 Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| `GOOGLE_API_KEY not set` | Add key to `.env` file |
-| `RESOURCE_EXHAUSTED` / `429` | Wait 24h or use `gemini-2.5-pro` |
-| ChromaDB lock error | Close other instances |
-| Port already in use | Change port: `--port 8001` |
+```
+┌────────────────────────────────────────────────────────────────┐
+│  Issue                         │  Solution                     │
+├────────────────────────────────────────────────────────────────┤
+│  GOOGLE_API_KEY not set        │  Add key to .env file         │
+├────────────────────────────────────────────────────────────────┤
+│  RESOURCE_EXHAUSTED / 429      │  Wait 24h or use gemini-pro   │
+├────────────────────────────────────────────────────────────────┤
+│  ChromaDB lock error           │  Close other app instances    │
+├────────────────────────────────────────────────────────────────┤
+│  Port already in use           │  Use --port 8001              │
+└────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 🚀 Deployment
+## 🚀 Deployment Guide
 
-### ⚠️ Important: Local Storage Limitation
+### ⚠️ Important: Storage Requirement
 
-This app uses **local ChromaDB** (`./chroma_db/`) which requires **persistent disk storage**.
+This app uses **local ChromaDB** storage (`./chroma_db/`) which requires **persistent disk**.
 
 ### ✅ Compatible Platforms
 
-| Platform | Cost | Persistent Storage | Notes |
-|----------|------|-------------------|-------|
-| **Hugging Face Spaces** | FREE | ✅ Yes | ⭐ **Best free option** |
-| Fly.io | FREE | ✅ Yes (3GB) | Excellent choice |
-| Render | $7/mo | ✅ Yes | Production-ready |
-| Railway | ~$5 trial | ✅ Yes | Good for testing |
+```
+┌──────────────────────────┬──────────┬──────────────┬─────────────────┐
+│  Platform                │  Cost    │  Persistent  │  Recommendation │
+├──────────────────────────┼──────────┼──────────────┼─────────────────┤
+│  Hugging Face Spaces     │  FREE    │  ✅ Yes      │  ⭐ Best free   │
+├──────────────────────────┼──────────┼──────────────┼─────────────────┤
+│  Fly.io                  │  FREE    │  ✅ Yes (3GB)│  ⭐ Excellent   │
+├──────────────────────────┼──────────┼──────────────┼─────────────────┤
+│  Render (Paid)           │  $7/mo   │  ✅ Yes      │  Production     │
+├──────────────────────────┼──────────┼──────────────┼─────────────────┤
+│  Railway                 │  ~$5 trial│ ✅ Yes      │  Testing        │
+└──────────────────────────┴──────────┴──────────────┴─────────────────┘
+```
 
 ### ❌ NOT Compatible
 
-- **Render Free Tier** - Ephemeral storage (data lost on restart)
-- **Vercel** - Serverless (no local storage)
-- **Netlify** - Serverless (no local storage)
+```
+✗ Render Free Tier    → Ephemeral storage (data lost on restart)
+✗ Vercel              → Serverless (no local storage)
+✗ Netlify             → Serverless (no local storage)
+```
 
-### 🔄 For Serverless Deployment
+### 🔄 For Serverless Platforms
 
 Replace ChromaDB with cloud vector database:
-- Pinecone (1M vectors free)
-- Weaviate Cloud (free tier)
-- Supabase + pgvector (free tier)
+- **Pinecone** (1M vectors free)
+- **Weaviate Cloud** (free tier)
+- **Supabase + pgvector** (free tier)
+
+Modify `rag/vectorstore.py` to use cloud APIs.
 
 ---
 
-## 🔒 Security
+## 🔒 Security Checklist
 
-- ⚠️ Never commit `.env` file
-- ✅ `.gitignore` already configured
-- 🔐 No authentication (single-user design)
-- 📝 File upload validated by extension
+```
+✅ .env file in .gitignore
+✅ File upload validation by extension
+✅ Frontend sanitizes markdown output
+⚠️ No authentication (single-user design)
+⚠️ Never commit .env to version control
+```
+
+---
+
+## 📦 Dependencies
+
+```python
+# requirements.txt
+google-genai>=1.0.0      # Gemini API
+chromadb>=0.5.0          # Vector database
+pypdf>=4.0.0             # PDF parsing
+requests>=2.31.0         # HTTP client
+beautifulsoup4>=4.12.0   # Web scraping
+tiktoken>=0.7.0          # Tokenization
+streamlit>=1.35.0        # UI framework
+pymupdf>=1.24.0          # Robust PDF extraction
+```
 
 ---
 
@@ -305,12 +412,12 @@ Open source for educational and commercial use.
 
 ---
 
-## 🙋 Support
+## 🙋 Need Help?
 
 - 📖 Check Troubleshooting section above
-- 🔧 Review [Google Gemini API Docs](https://ai.google.dev/)
-- 🗄️ Review [ChromaDB Docs](https://docs.trychroma.com/)
+- 🔧 [Google Gemini API Docs](https://ai.google.dev/)
+- 🗄️ [ChromaDB Documentation](https://docs.trychroma.com/)
 
 ---
 
-**Built with** ❤️ using Google Gemini + ChromaDB + Python
+**Built with** ❤️ using **Google Gemini** + **ChromaDB** + **Python**
