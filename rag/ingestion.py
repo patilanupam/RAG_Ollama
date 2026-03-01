@@ -1,11 +1,6 @@
 """
 ingestion.py — Load documents from PDF, Markdown files, or web URLs.
 Returns a list of {"text": str, "source": str, "page": int | None}.
-
-PDF extraction chain:
-  1. pymupdf (fitz)  — fast, handles most PDFs
-  2. pypdf            — fallback for pages fitz misses
-  3. Tesseract OCR    — last resort for scanned/image-only pages
 """
 
 import logging
@@ -13,66 +8,30 @@ import pathlib
 import requests
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
-import fitz  # pymupdf
+import fitz  # pymupdf — more robust PDF extraction
 
 # Suppress pypdf encoding warnings (e.g. /SymbolSetEncoding not implemented)
 logging.getLogger("pypdf").setLevel(logging.ERROR)
 
-# ── OCR setup ────────────────────────────────────────────────────
-_OCR_AVAILABLE = False
-try:
-    import pytesseract
-    from pdf2image import convert_from_path
-    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-    # Quick smoke-test
-    pytesseract.get_tesseract_version()
-    _OCR_AVAILABLE = True
-    logging.info("OCR: Tesseract ready ✓")
-except Exception as _e:
-    logging.warning(f"OCR: Tesseract not available ({_e}) — scanned pages will be skipped")
-
-
-def _ocr_page(file_path: str, page_number: int) -> str:
-    """Render a single PDF page to an image and OCR it. page_number is 1-based."""
-    try:
-        images = convert_from_path(
-            file_path, dpi=300,
-            first_page=page_number, last_page=page_number,
-            poppler_path=None  # use PATH
-        )
-        if images:
-            return pytesseract.image_to_string(images[0]).strip()
-    except Exception as e:
-        logging.warning(f"OCR failed on page {page_number} of {file_path}: {e}")
-    return ""
-
 
 def load_pdf(file_path: str) -> list[dict]:
     """Extract text page-by-page from a PDF file.
-    Chain: pymupdf → pypdf → Tesseract OCR (if installed).
+    Uses pymupdf (fitz) as primary extractor; falls back to pypdf per-page.
     """
     docs = []
     fitz_doc = fitz.open(file_path)
     for i, fitz_page in enumerate(fitz_doc):
         text = fitz_page.get_text("text").strip()
-
         if not text:
-            # Fallback 1: pypdf
+            # Fallback: try pypdf for this page
             try:
                 reader = PdfReader(file_path)
                 if i < len(reader.pages):
                     text = (reader.pages[i].extract_text() or "").strip()
             except Exception:
                 pass
-
-        if not text and _OCR_AVAILABLE:
-            # Fallback 2: OCR the rendered page image
-            logging.info(f"OCR: running on page {i + 1} of {file_path}")
-            text = _ocr_page(file_path, i + 1)
-
         if text:
             docs.append({"text": text, "source": str(file_path), "page": i + 1})
-
     fitz_doc.close()
     return docs
 

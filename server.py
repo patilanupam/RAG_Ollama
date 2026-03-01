@@ -11,10 +11,7 @@ import tempfile, os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
-
-_key = os.getenv("GOOGLE_API_KEY", "")
-print(f"[startup] GOOGLE_API_KEY loaded: {_key[:12]}... (len={len(_key)})")
+load_dotenv()
 
 from rag.ingestion import load_document
 from rag.chunker import chunk_documents
@@ -36,22 +33,16 @@ def serve_ui():
 
 @app.get("/api/status")
 def status():
-    try:
-        return {"chunk_count": collection_count()}
-    except Exception as e:
-        return {"chunk_count": 0, "error": str(e)}
+    return {"chunk_count": collection_count()}
 
 
 @app.get("/api/files")
 def list_data_files():
-    try:
-        data_dir = Path("./data")
-        if not data_dir.exists():
-            return {"files": []}
-        exts = {".pdf", ".md", ".markdown", ".txt"}
-        return {"files": [f.name for f in sorted(data_dir.glob("*")) if f.suffix.lower() in exts]}
-    except Exception as e:
-        return {"files": [], "error": str(e)}
+    data_dir = Path("./data")
+    if not data_dir.exists():
+        return {"files": []}
+    exts = {".pdf", ".md", ".markdown", ".txt"}
+    return {"files": [f.name for f in sorted(data_dir.glob("*")) if f.suffix.lower() in exts]}
 
 
 @app.post("/api/clear")
@@ -128,31 +119,28 @@ class ChatReq(BaseModel):
 @app.post("/api/chat")
 def chat(req: ChatReq):
     global _chat_history
-    try:
-        if collection_count() == 0:
-            return {
-                "answer": "Please ingest some documents first so I can help you! 📄",
-                "sources": [], "chunks": [],
-            }
-        chunks = retrieve(req.message, k=req.top_k)
-        if not chunks:
-            ans = "I couldn't find relevant information in your documents. Could you rephrase your question?"
-            _chat_history += [{"role": "user", "content": req.message}, {"role": "assistant", "content": ans}]
-            return {"answer": ans, "sources": [], "chunks": []}
-
-        result = generate_answer(req.message, chunks, history=_chat_history[-10:])
-        _chat_history += [
-            {"role": "user", "content": req.message},
-            {"role": "assistant", "content": result["answer"]},
-        ]
+    if collection_count() == 0:
         return {
-            "answer": result["answer"],
-            "sources": result["sources"],
-            "chunks": [
-                {"text": c["text"][:500], "source": c["source"],
-                 "page": c.get("page"), "score": c.get("score")}
-                for c in chunks
-            ],
+            "answer": "Please ingest some documents first so I can help you! 📄",
+            "sources": [], "chunks": [],
         }
-    except Exception as e:
-        raise HTTPException(500, f"Error: {str(e)}")
+    chunks = retrieve(req.message, k=req.top_k)
+    if not chunks:
+        ans = "I couldn't find relevant information in your documents. Could you rephrase your question?"
+        _chat_history += [{"role": "user", "content": req.message}, {"role": "assistant", "content": ans}]
+        return {"answer": ans, "sources": [], "chunks": []}
+
+    result = generate_answer(req.message, chunks, history=_chat_history[-10:])
+    _chat_history += [
+        {"role": "user", "content": req.message},
+        {"role": "assistant", "content": result["answer"]},
+    ]
+    return {
+        "answer": result["answer"],
+        "sources": result["sources"],
+        "chunks": [
+            {"text": c["text"][:500], "source": c["source"],
+             "page": c.get("page"), "score": c.get("score")}
+            for c in chunks
+        ],
+    }

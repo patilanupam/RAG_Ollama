@@ -7,7 +7,7 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 EMBED_MODEL = "gemini-embedding-001"
 
@@ -20,20 +20,14 @@ def _client() -> genai.Client:
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Return a list of embedding vectors for the given texts (document task).
-    Sends in batches of 100 to respect the API limit.
-    """
+    """Return a list of embedding vectors for the given texts (document task)."""
     client = _client()
-    all_embeddings = []
-    for i in range(0, len(texts), 100):
-        batch = texts[i:i + 100]
-        result = client.models.embed_content(
-            model=EMBED_MODEL,
-            contents=batch,
-            config=types.EmbedContentConfig(task_type="retrieval_document"),
-        )
-        all_embeddings.extend([e.values for e in result.embeddings])
-    return all_embeddings
+    result = client.models.embed_content(
+        model=EMBED_MODEL,
+        contents=texts,
+        config=types.EmbedContentConfig(task_type="retrieval_document"),
+    )
+    return [e.values for e in result.embeddings]
 
 
 def embed_query(query: str) -> list[float]:

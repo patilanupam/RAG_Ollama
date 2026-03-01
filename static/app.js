@@ -278,13 +278,7 @@ function addEmptyState() {
     <div class="empty" id="emptyState">
       <div class="empty-icon">✨</div>
       <h2>Ask Me Anything</h2>
-      <p>Upload your documents on the left, then ask questions. I answer with citations and remember our conversation.</p>
-      <div class="chips">
-        <button class="chip" onclick="chipSend('What topics are covered in the documents?')">📋 What topics are covered?</button>
-        <button class="chip" onclick="chipSend('Give me a summary of the key points')">📝 Summarise key points</button>
-        <button class="chip" onclick="chipSend('Explain the main concepts')">💡 Explain concepts</button>
-        <button class="chip" onclick="chipSend('What are the key takeaways?')">🔍 Key takeaways</button>
-      </div>
+      <p>Upload your documents on the left and ask me anything about them. I'll remember our conversation.</p>
     </div>`;
 }
 
