@@ -260,13 +260,38 @@ def chat(req: ChatReq):
                 "answer": "Please ingest some documents first so I can help you! 📄",
                 "sources": [], "chunks": [],
             }
-        chunks = retrieve(req.message, k=req.top_k, source_filter=req.source_filter)
+
+        # Special handling for document summaries - retrieve more chunks
+        query_lower = req.message.lower()
+        is_summary = any(word in query_lower for word in ['summarize', 'summary', 'overview', 'tell me about this'])
+
+        # For summaries with document filter, retrieve more chunks
+        effective_k = req.top_k
+        if is_summary and req.source_filter:
+            effective_k = min(req.top_k * 2, 30)  # Double the chunks for summaries, max 30
+
+        chunks = retrieve(req.message, k=effective_k, source_filter=req.source_filter)
         if not chunks:
             ans = "I couldn't find relevant information in your documents. Could you rephrase your question?"
             _chat_history += [{"role": "user", "content": req.message}, {"role": "assistant", "content": ans}]
             return {"answer": ans, "sources": [], "chunks": []}
 
+        # Check if results span multiple documents without filter
+        if not req.source_filter and len(chunks) > 0:
+            unique_sources = set(c["source"] for c in chunks)
+            if len(unique_sources) > 1:
+                # Add a helpful note about using document filter
+                filter_hint = f"\n\n**💡 Tip:** Your results come from {len(unique_sources)} different documents. For more focused answers, use the document filter dropdown to search within a specific PDF."
+            else:
+                filter_hint = ""
+        else:
+            filter_hint = ""
+
         result = generate_answer(req.message, chunks, history=_chat_history[-10:])
+
+        # Append filter hint if applicable
+        if filter_hint:
+            result["answer"] += filter_hint
         _chat_history += [
             {"role": "user", "content": req.message},
             {"role": "assistant", "content": result["answer"]},
@@ -275,7 +300,7 @@ def chat(req: ChatReq):
             "answer": result["answer"],
             "sources": result["sources"],
             "chunks": [
-                {"text": c["text"][:500], "source": c["source"],
+                {"text": c["text"][:1200], "source": c["source"],
                  "page": c.get("page"), "score": c.get("score")}
                 for c in chunks
             ],

@@ -1,7 +1,7 @@
 /* jshint esversion: 9 */
 'use strict';
 
-let selFiles = new Set(), uploadFiles = [], topK = 10, busy = false, selectedDocument = null;
+let selFiles = new Set(), uploadFiles = [], topK = 15, busy = false, selectedDocument = null;
 
 // ── Init ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -106,6 +106,15 @@ function updateDocFilter(documents) {
 function setDocFilter() {
   const select = document.getElementById('docFilter');
   selectedDocument = select.value || null;
+
+  // Show visual indicator
+  const indicator = document.querySelector('.hdr-sub');
+  if (selectedDocument && indicator) {
+    indicator.innerHTML = `<span class="online"></span>Searching in: ${selectedDocument.substring(0, 30)}...`;
+  } else if (indicator) {
+    indicator.innerHTML = '<span class="online"></span>Ready to help';
+  }
+
   console.log('Document filter set to:', selectedDocument || 'All documents');
 }
 
