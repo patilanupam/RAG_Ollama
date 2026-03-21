@@ -1,7 +1,7 @@
 /* jshint esversion: 9 */
 'use strict';
 
-let selFiles = new Set(), uploadFiles = [], topK = 5, busy = false;
+let selFiles = new Set(), uploadFiles = [], topK = 10, busy = false, selectedDocument = null;
 
 // ── Init ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -66,6 +66,47 @@ async function loadUploadedDocuments() {
       statsEl.innerHTML = `${data.stats.total_documents} documents · ${data.stats.total_size_formatted}`;
     }
   }
+
+  // Update document filter dropdown
+  updateDocFilter(data.documents);
+}
+
+function updateDocFilter(documents) {
+  const select = document.getElementById('docFilter');
+  if (!select) {
+    console.error('docFilter element not found');
+    return;
+  }
+
+  console.log('Updating document filter with', documents.length, 'documents');
+
+  // Keep current selection
+  const currentValue = select.value;
+
+  // Rebuild options
+  select.innerHTML = '<option value="">All documents</option>';
+
+  if (!documents || documents.length === 0) {
+    console.log('No documents to add to filter');
+    return;
+  }
+
+  documents.forEach(doc => {
+    const option = document.createElement('option');
+    option.value = doc.original_filename;
+    option.textContent = doc.original_filename;
+    if (doc.original_filename === currentValue) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+    console.log('Added filter option:', doc.original_filename);
+  });
+}
+
+function setDocFilter() {
+  const select = document.getElementById('docFilter');
+  selectedDocument = select.value || null;
+  console.log('Document filter set to:', selectedDocument || 'All documents');
 }
 
 function formatBytes(bytes) {
@@ -269,9 +310,12 @@ async function send() {
   setTyping(true);
 
   try {
+    const payload = { message: txt, top_k: topK };
+    if (selectedDocument) payload.source_filter = selectedDocument;
+
     const res = await fetch('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: txt, top_k: topK })
+      body: JSON.stringify(payload)
     });
     const d = await res.json();
     if (!res.ok) throw new Error(d.detail || 'Server error');

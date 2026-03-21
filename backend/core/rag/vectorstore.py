@@ -49,14 +49,29 @@ def add_chunks(chunks: list[dict], embeddings: list[list[float]]) -> int:
     return len(ids)
 
 
-def query_chunks(query_embedding: list[float], k: int = 5) -> list[dict]:
-    """Return top-k chunks closest to the query embedding."""
+def query_chunks(query_embedding: list[float], k: int = 5, source_filter: str = None) -> list[dict]:
+    """Return top-k chunks closest to the query embedding.
+    
+    Args:
+        query_embedding: The query vector
+        k: Number of results to return
+        source_filter: Optional filename to filter by (e.g., "Counselling_pdf_india_gpt.pdf")
+    """
     collection = _get_collection()
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=min(k, collection.count() or 1),
-        include=["documents", "metadatas", "distances"],
-    )
+    
+    # Build query parameters
+    query_params = {
+        "query_embeddings": [query_embedding],
+        "n_results": min(k, collection.count() or 1),
+        "include": ["documents", "metadatas", "distances"],
+    }
+    
+    # Add source filter if specified
+    if source_filter:
+        query_params["where"] = {"source": source_filter}
+    
+    results = collection.query(**query_params)
+    
     chunks = []
     for doc, meta, dist in zip(
         results["documents"][0],

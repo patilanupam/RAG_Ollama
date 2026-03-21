@@ -248,6 +248,7 @@ def list_sources():
 class ChatReq(BaseModel):
     message: str
     top_k: int = 5
+    source_filter: str = None  # Optional: filter by specific document filename
 
 
 @app.post("/api/chat")
@@ -259,7 +260,7 @@ def chat(req: ChatReq):
                 "answer": "Please ingest some documents first so I can help you! 📄",
                 "sources": [], "chunks": [],
             }
-        chunks = retrieve(req.message, k=req.top_k)
+        chunks = retrieve(req.message, k=req.top_k, source_filter=req.source_filter)
         if not chunks:
             ans = "I couldn't find relevant information in your documents. Could you rephrase your question?"
             _chat_history += [{"role": "user", "content": req.message}, {"role": "assistant", "content": ans}]
