@@ -20,8 +20,8 @@ env/
 .venv/
 .env/
 
-# ChromaDB (local vector database - do not commit)
-chroma_db/
+# Storage directory (database, uploads, vector store, logs)
+storage/
 
 # Data files (optional - remove if you want to commit sample data)
 # data/
@@ -35,6 +35,3 @@ chroma_db/
 # OS
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log

@@ -1,423 +1,231 @@
-# 🧠 RAG Chatbot - Counsellor Expert
+# Ask Me Anything - RAG System
 
-AI-powered document Q&A system. Upload documents, ask questions, get cited answers.
+A Retrieval-Augmented Generation (RAG) system that lets you chat with your documents using AI.
 
----
+## Features
 
-## ✨ Features
-
-- 📄 **Multi-format**: PDF, Markdown, TXT, web URLs
-- 🎨 **Dual UI**: Streamlit or FastAPI + Custom Frontend
-- 🔍 **Smart Search**: Semantic search with ChromaDB
-- 💬 **Memory**: Remembers last 10 conversation turns
-- 📚 **Citations**: Every answer includes source references
-
----
-
-## 🏗️ System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          USER INTERFACE                              │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│   [Streamlit UI]          OR          [FastAPI + Frontend]           │
-│   Port: 8501                          Port: 8000                     │
-│                                                                       │
-└────────────────────────────┬──────────────────────────────────────────┘
-                             │
-┌─────────────────────────────────────────────────────────────────────┐
-│                          RAG PIPELINE                                │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│  [Ingestion] → [Chunker] → [Embedder] → [Vector Store]              │
-│  PDF/MD/URL    600 tokens   Gemini API   ChromaDB                   │
-│                100 overlap  768-dim                                  │
-│                                                                       │
-│                            ↓                                         │
-│                                                                       │
-│  [Retriever] → [Generator]                                           │
-│  Top-K Search  Gemini 2.5 Flash                                     │
-│                                                                       │
-└────────────────────────────┬──────────────────────────────────────────┘
-                             │
-┌─────────────────────────────────────────────────────────────────────┐
-│                    STORAGE & EXTERNAL SERVICES                       │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│  [ChromaDB]         [Google Gemini API]         [Data Folder]       │
-│  ./chroma_db/       Embeddings + Generation     ./data/             │
-│  Persistent         768-dim vectors             Source Files         │
-│                                                                       │
-└─────────────────────────────────────────────────────────────────────┘
-```
+- 📄 **Multiple document formats**: PDF, Markdown, TXT, Web URLs
+- 🔍 **Smart search**: Vector-based semantic search using ChromaDB
+- 🤖 **Powered by DeepSeek**: Uses Ollama with DeepSeek v3.1 for high-quality answers
+- 💬 **Chat memory**: Remembers your conversation context
+- 🎨 **Clean UI**: Modern chat interface with dark/light mode
+- 📊 **OCR support**: Reads text from scanned documents
+- 📚 **Source citations**: Every answer includes references
 
 ---
 
-## 📊 Data Flow Diagrams
+## Quick Start
 
-### 1️⃣ Document Ingestion Flow
+### 1. Prerequisites
 
-```
-┌──────────────┐
-│   Document   │  (PDF / Markdown / TXT / Web URL)
-│  📕 📝 📄 🌐 │
-└──────┬───────┘
-       │
-       ▼
-┌─────────────────────────┐
-│  📄 Text Extraction     │
-│  ─────────────────────  │
-│  • PyMuPDF for PDF      │
-│  • BeautifulSoup for URL│
-│  • Preserve metadata    │
-└──────────┬──────────────┘
-           │
-           ▼
-┌─────────────────────────┐
-│  ✂️  Text Chunking      │
-│  ─────────────────────  │
-│  • 600 tokens/chunk     │
-│  • 100 token overlap    │
-│  • tiktoken (cl100k)    │
-└──────────┬──────────────┘
-           │
-           ▼
-┌─────────────────────────┐
-│  🔢 Embedding           │
-│  ─────────────────────  │
-│  • Gemini API call      │
-│  • 768 dimensions       │
-│  • Batch processing     │
-└──────────┬──────────────┘
-           │
-           ▼
-┌─────────────────────────┐
-│  💾 Store in ChromaDB   │
-│  ─────────────────────  │
-│  • Cosine similarity    │
-│  • Persistent storage   │
-│  • Ready for retrieval  │
-└─────────────────────────┘
+- **Python 3.11+**
+- **Ollama** (for running AI models)
 
-⏱️  Time: ~5-10 seconds for 10-page PDF
-```
+### 2. Install Ollama
 
----
+Download and install from: https://ollama.com/download
 
-### 2️⃣ Query Processing Flow
-
-```
-┌─────────────────────────┐
-│  💬 User Question       │
-│  "What is counselling?" │
-└──────────┬──────────────┘
-           │
-           ├─────────────────────────┐
-           │                         │
-           ▼                         ▼
-┌──────────────────────┐   ┌─────────────────┐
-│  🔢 Embed Query      │   │ 💭 Conversation │
-│  Gemini API          │   │    History      │
-│  768-dim vector      │   │  (Last 10 turns)│
-└──────────┬───────────┘   └────────┬────────┘
-           │                        │
-           ▼                        │
-┌──────────────────────┐            │
-│  🔍 Search ChromaDB  │            │
-│  Cosine Similarity   │            │
-│  Retrieve Top-K=5    │            │
-└──────────┬───────────┘            │
-           │                        │
-           ▼                        │
-┌──────────────────────┐            │
-│  📄 Top 5 Chunks     │            │
-│  Ranked by relevance │            │
-└──────────┬───────────┘            │
-           │                        │
-           └────────┬───────────────┘
-                    │
-                    ▼
-           ┌────────────────────┐
-           │  📋 Build Context  │
-           │  Query + Chunks +  │
-           │     History        │
-           └─────────┬──────────┘
-                     │
-                     ▼
-           ┌────────────────────┐
-           │  ✨ Generate       │
-           │  Gemini 2.5 Flash  │
-           │  With citations    │
-           └─────────┬──────────┘
-                     │
-                     ▼
-           ┌────────────────────┐
-           │  💬 AI Response    │
-           │  "Counselling is   │
-           │   [1] ... [2] ..." │
-           │                    │
-           │  📚 Sources: [1]   │
-           │  doc.pdf page 3    │
-           └────────────────────┘
-
-⏱️  Time: ~3-4 seconds per query
-```
-
----
-
-## 🚀 Quick Start
-
-### 1. Install Dependencies
+After installation, sign in and pull the required models:
 
 ```bash
+ollama signin
+ollama pull deepseek-v3.1:671b-cloud
+ollama pull nomic-embed-text
+```
+
+### 3. Install Python Dependencies
+
+```bash
+cd RAG_Drive
 pip install -r requirements.txt
 ```
 
-### 2. Configure API Key
+### 4. Configure Environment
 
-Create/edit `.env`:
+The `.env` file is already set up for local Ollama:
+
 ```env
-GOOGLE_API_KEY=your_api_key_here
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=deepseek-v3.1:671b-cloud
+OLLAMA_EMBED_MODEL=nomic-embed-text
 ```
 
-🔑 Get free key: https://aistudio.google.com
+No API key needed when using local Ollama!
 
-### 3. Run Application
+### 5. Run the Server
 
-**Option A: Streamlit** (Beginner-friendly)
+**Option A: Using run.py (recommended)**
 ```bash
-streamlit run app.py
+python run.py
 ```
-→ Open http://localhost:8501
 
-**Option B: FastAPI** (Production-ready)
+**Option B: Direct uvicorn (for monitoring/development)**
 ```bash
-uvicorn server:app --reload --port 8000
+uvicorn backend.api.server:app --host 0.0.0.0 --port 8000 --reload
 ```
-→ Open http://localhost:8000
 
-### 4. Use It
+The `--reload` flag enables auto-restart when you change code files.
 
-1. 📤 Upload documents (sidebar/UI)
-2. ⏳ Wait for indexing (~5-10s)
-3. 💬 Ask questions
-4. 📚 Get answers with citations
+### 6. Open in Browser
+
+Go to: **http://localhost:8000**
 
 ---
 
-## 📁 Project Structure
+## Usage
+
+### Upload Documents
+
+1. **Upload files**: Click "Choose File" or drag & drop PDFs/Markdown/TXT files
+2. **Web URLs**: Enter a URL in the URL field and click "Ingest URL"
+3. **From data/ folder**: Place files in `storage/data/` and select from the dropdown
+
+Documents are stored persistently - you only need to upload once!
+
+### Ask Questions
+
+Type your question in the chat box. The AI will:
+- Search your documents for relevant information
+- Generate an answer with inline citations like [1], [2]
+- Show source documents with page numbers
+- Remember your conversation for follow-up questions
+
+### Manage Documents
+
+- View all uploaded documents in the "Uploaded Documents" section
+- Delete individual documents by clicking the delete button
+- Clear all data using the "Clear" button (removes all documents and chat history)
+
+---
+
+## Project Structure
 
 ```
 RAG_Drive/
+├── run.py                     # Application entry point
+├── .env                       # Configuration (Ollama settings)
+├── requirements.txt           # Python dependencies
 │
-├── app.py                 # Streamlit UI
-├── server.py             # FastAPI backend
-├── requirements.txt      # Python dependencies
-├── .env                  # API keys (SECRET - DO NOT COMMIT)
+├── backend/                   # Backend application
+│   ├── api/
+│   │   └── server.py          # FastAPI routes & endpoints
+│   ├── core/
+│   │   ├── config.py          # Centralized configuration
+│   │   └── rag/               # RAG pipeline modules
+│   │       ├── ingestion.py   # PDF/Markdown/URL loaders
+│   │       ├── chunker.py     # Text splitting with overlap
+│   │       ├── embedder.py    # Ollama embeddings
+│   │       ├── vectorstore.py # ChromaDB vector database
+│   │       ├── retriever.py   # Semantic search
+│   │       └── generator.py   # Answer generation
+│   ├── database/
+│   │   └── manager.py         # SQLite document database
+│   └── services/
+│       ├── file_manager.py    # File upload & storage
+│       └── health.py          # System health checks
 │
-├── rag/                  # Core RAG modules
-│   ├── ingestion.py      # Load PDF/MD/URL
-│   ├── chunker.py        # Split text (tiktoken)
-│   ├── embedder.py       # Gemini embeddings
-│   ├── vectorstore.py    # ChromaDB operations
-│   ├── retriever.py      # Semantic search
-│   └── generator.py      # Answer generation
+├── frontend/                  # Frontend UI
+│   └── static/
+│       ├── index.html         # Main page
+│       ├── css/
+│       │   └── style.css      # Styling
+│       └── js/
+│           └── app.js         # JavaScript logic
 │
-├── static/               # Frontend assets (FastAPI)
-│   ├── index.html
-│   ├── app.js
-│   └── style.css
+├── storage/                   # Auto-created on first run
+│   ├── data/                  # Manual document storage
+│   ├── uploads/               # Uploaded documents (persistent)
+│   ├── chroma_db/             # Vector database
+│   ├── logs/                  # Application logs
+│   └── documents.db           # Document metadata (SQLite)
 │
-├── data/                 # Place your documents here
-└── chroma_db/           # Vector database (auto-created)
+└── tests/                     # Test files
 ```
 
 ---
 
-## 🛠️ Technology Stack
+## Configuration
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  Backend       │  Python 3.11+, FastAPI, Streamlit      │
-├─────────────────────────────────────────────────────────┤
-│  Vector DB     │  ChromaDB 0.5+ (local, persistent)     │
-├─────────────────────────────────────────────────────────┤
-│  Embeddings    │  Google Gemini (768 dimensions)        │
-├─────────────────────────────────────────────────────────┤
-│  LLM           │  Google Gemini 2.5 Flash               │
-├─────────────────────────────────────────────────────────┤
-│  PDF Parser    │  PyMuPDF + pypdf (fallback)            │
-├─────────────────────────────────────────────────────────┤
-│  Chunking      │  tiktoken (cl100k_base)                │
-└─────────────────────────────────────────────────────────┘
-```
+### Change AI Model
 
----
+Edit `.env` and change `OLLAMA_MODEL` to any supported model:
 
-## 🌐 API Endpoints (FastAPI)
-
-```
-GET    /api/status              → Get chunk count
-GET    /api/files               → List data/ folder files
-POST   /api/chat                → Send message, get answer
-POST   /api/ingest/file         → Upload & ingest file
-POST   /api/ingest/url          → Ingest from web URL
-POST   /api/ingest/datafile     → Ingest from data/ folder
-POST   /api/clear               → Clear all data
-```
-
-**Example**:
-```bash
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What is counselling?", "top_k": 5}'
-```
-
----
-
-## ⚙️ Configuration
-
-### Environment Variables
 ```env
-GOOGLE_API_KEY=required              # Get from aistudio.google.com
-GEMINI_MODEL=gemini-2.5-flash       # Optional: gemini-2.5-pro
+# Cloud models (require signin)
+OLLAMA_MODEL=deepseek-v3.1:671b-cloud
+OLLAMA_MODEL=gpt-oss:120b-cloud
+
+# Local models (faster, free)
+OLLAMA_MODEL=qwen3:30b
+OLLAMA_MODEL=gemma3:27b
 ```
 
-### Adjust Chunking
-Edit `rag/chunker.py`:
-```python
-CHUNK_SIZE = 600        # tokens per chunk
-CHUNK_OVERLAP = 100     # overlap between chunks
+Then pull the model: `ollama pull <model-name>`
+
+### Change Embedding Model
+
+```env
+OLLAMA_EMBED_MODEL=nomic-embed-text
 ```
 
-### Retrieval Settings
-- **Top-K**: 1-10 (adjustable in UI)
-- **Recommended**: 5 for balance, 3 for speed
+### Adjust Chunk Size
 
----
-
-## ⚡ Performance Metrics
-
-```
-┌──────────────────────────────────────┬──────────────┐
-│  Operation                           │  Time        │
-├──────────────────────────────────────┼──────────────┤
-│  PDF Ingestion (10 pages)            │  ~5-10s      │
-│  Query Embedding                     │  ~0.5s       │
-│  Vector Search (ChromaDB)            │  ~0.3s       │
-│  Answer Generation (Gemini)          │  ~2-3s       │
-├──────────────────────────────────────┼──────────────┤
-│  Total Query Time                    │  ~3-4s       │
-└──────────────────────────────────────┴──────────────┘
-
-Capacity:
-  • Documents: Unlimited (disk-limited)
-  • Chunks: Millions (ChromaDB handles it efficiently)
-  • Conversation History: Last 10 turns in memory
-```
-
----
-
-## 🐛 Troubleshooting
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│  Issue                         │  Solution                     │
-├────────────────────────────────────────────────────────────────┤
-│  GOOGLE_API_KEY not set        │  Add key to .env file         │
-├────────────────────────────────────────────────────────────────┤
-│  RESOURCE_EXHAUSTED / 429      │  Wait 24h or use gemini-pro   │
-├────────────────────────────────────────────────────────────────┤
-│  ChromaDB lock error           │  Close other app instances    │
-├────────────────────────────────────────────────────────────────┤
-│  Port already in use           │  Use --port 8001              │
-└────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🚀 Deployment Guide
-
-### ⚠️ Important: Storage Requirement
-
-This app uses **local ChromaDB** storage (`./chroma_db/`) which requires **persistent disk**.
-
-### ✅ Compatible Platforms
-
-```
-┌──────────────────────────┬──────────┬──────────────┬─────────────────┐
-│  Platform                │  Cost    │  Persistent  │  Recommendation │
-├──────────────────────────┼──────────┼──────────────┼─────────────────┤
-│  Hugging Face Spaces     │  FREE    │  ✅ Yes      │  ⭐ Best free   │
-├──────────────────────────┼──────────┼──────────────┼─────────────────┤
-│  Fly.io                  │  FREE    │  ✅ Yes (3GB)│  ⭐ Excellent   │
-├──────────────────────────┼──────────┼──────────────┼─────────────────┤
-│  Render (Paid)           │  $7/mo   │  ✅ Yes      │  Production     │
-├──────────────────────────┼──────────┼──────────────┼─────────────────┤
-│  Railway                 │  ~$5 trial│ ✅ Yes      │  Testing        │
-└──────────────────────────┴──────────┴──────────────┴─────────────────┘
-```
-
-### ❌ NOT Compatible
-
-```
-✗ Render Free Tier    → Ephemeral storage (data lost on restart)
-✗ Vercel              → Serverless (no local storage)
-✗ Netlify             → Serverless (no local storage)
-```
-
-### 🔄 For Serverless Platforms
-
-Replace ChromaDB with cloud vector database:
-- **Pinecone** (1M vectors free)
-- **Weaviate Cloud** (free tier)
-- **Supabase + pgvector** (free tier)
-
-Modify `rag/vectorstore.py` to use cloud APIs.
-
----
-
-## 🔒 Security Checklist
-
-```
-✅ .env file in .gitignore
-✅ File upload validation by extension
-✅ Frontend sanitizes markdown output
-⚠️ No authentication (single-user design)
-⚠️ Never commit .env to version control
-```
-
----
-
-## 📦 Dependencies
+Edit `backend/core/config.py`:
 
 ```python
-# requirements.txt
-google-genai>=1.0.0      # Gemini API
-chromadb>=0.5.0          # Vector database
-pypdf>=4.0.0             # PDF parsing
-requests>=2.31.0         # HTTP client
-beautifulsoup4>=4.12.0   # Web scraping
-tiktoken>=0.7.0          # Tokenization
-streamlit>=1.35.0        # UI framework
-pymupdf>=1.24.0          # Robust PDF extraction
+CHUNK_SIZE = 600      # tokens per chunk
+CHUNK_OVERLAP = 100   # overlap between chunks
 ```
 
 ---
 
-## 📄 License
+## Troubleshooting
 
-Open source for educational and commercial use.
+### "Failed to connect to Ollama"
+
+Make sure Ollama is running:
+- **Windows**: Check system tray for Ollama icon
+- **Mac/Linux**: Run `ollama serve` in terminal
+
+### "Model not found"
+
+Pull the model first:
+```bash
+ollama pull deepseek-v3.1:671b-cloud
+ollama pull nomic-embed-text
+```
+
+### "Collection expecting embedding with dimension X"
+
+Your database has old embeddings. Clear it by clicking the "Clear" button in the UI, or delete the `storage/` folder and restart the server.
+
+### Slow processing
+
+- **For cloud models**: Speed depends on internet connection
+- **For large PDFs**: OCR takes time on scanned pages
+- **First run**: Models need to load into memory
 
 ---
 
-## 🙋 Need Help?
+## Tech Stack
 
-- 📖 Check Troubleshooting section above
-- 🔧 [Google Gemini API Docs](https://ai.google.dev/)
-- 🗄️ [ChromaDB Documentation](https://docs.trychroma.com/)
+- **Backend**: FastAPI, Python 3.11
+- **AI Models**: DeepSeek v3.1 (via Ollama)
+- **Embeddings**: Nomic Embed Text (768 dimensions)
+- **Vector DB**: ChromaDB
+- **OCR**: Tesseract + pdf2image
+- **Frontend**: Vanilla HTML/CSS/JavaScript
 
 ---
 
-**Built with** ❤️ using **Google Gemini** + **ChromaDB** + **Python**
+## License
+
+MIT License - feel free to use this for your projects!
+
+---
+
+## Need Help?
+
+- **Ollama Docs**: https://docs.ollama.com
+- **DeepSeek Models**: https://ollama.com/library/deepseek-v3.1
+- **ChromaDB**: https://docs.trychroma.com

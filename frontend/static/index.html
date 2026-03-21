@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ask Me Anything</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sb">
+    <div class="sb-head">
+      <div class="sb-logo">
+        <div class="sb-logo-icon">✨</div>
+        <span class="sb-logo-text">Ask Me Anything</span>
+      </div>
+      <div class="sb-tagline">Powered by your documents</div>
+    </div>
+    <div class="sb-body">
+
+      <div>
+        <p class="sb-label">📚 Uploaded Documents</p>
+        <div id="uploadedList"><p class="file-empty">Loading…</p></div>
+        <p class="sb-sublabel" id="uploadStats"></p>
+      </div>
+
+      <div>
+        <p class="sb-label">📁 Data Folder</p>
+        <div id="dataList"><p class="file-empty">Loading…</p></div>
+      </div>
+
+      <div>
+        <p class="sb-label">⬆️ Upload Documents</p>
+        <div class="dz" id="dz">
+          <input type="file" id="fileInput" multiple accept=".pdf,.md,.markdown,.txt">
+          <span class="dz-ico">📂</span>
+          <p><strong>Click to browse</strong> or drag &amp; drop</p>
+          <p>PDF · Markdown · TXT</p>
+        </div>
+      </div>
+
+      <div>
+        <p class="sb-label">🌐 Web Page</p>
+        <div class="url-row">
+          <input class="url-in" type="url" id="urlIn" placeholder="https://example.com">
+          <button class="btn btn-primary btn-sm" onclick="ingestURL()">Fetch</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-full" id="ingestBtn" onclick="ingestSelected()">⬆️ Ingest Selected</button>
+        </div>
+        <div class="prog" id="prog" style="display:none"></div>
+      </div>
+
+      <div>
+        <p class="sb-label">📊 Stats</p>
+        <div class="stat-card">
+          <div>
+            <div class="stat-lbl">Chunks indexed</div>
+            <div class="stat-val" id="chunkCount">0</div>
+          </div>
+          <button class="btn btn-danger" onclick="clearAll()">🗑 Clear</button>
+        </div>
+      </div>
+
+      <div>
+        <p class="sb-label">⚙️ Retrieval</p>
+        <div class="slider-row">
+          <label>Top-K</label>
+          <input type="range" id="tkSlider" min="1" max="10" value="5">
+          <span class="slider-val" id="tkVal">5</span>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <div class="hdr">
+      <div class="hdr-left">
+        <div class="hdr-avatar">✨</div>
+        <div>
+          <div class="hdr-title">Ask Me Anything</div>
+          <div class="hdr-sub"><span class="online"></span>Ready to help</div>
+        </div>
+      </div>
+      <div class="hdr-right">
+        <span class="chunk-pill" id="hdrChunks">0 chunks</span>
+        <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+      </div>
+    </div>
+
+    <div class="msgs" id="msgs">
+      <div class="empty" id="emptyState">
+        <div class="empty-icon">✨</div>
+        <h2>Ask Me Anything</h2>
+        <p>Upload your documents on the left, then ask questions. I answer with citations and remember our conversation.</p>
+        <div class="chips">
+          <button class="chip" onclick="chipSend('What topics are covered in the documents?')">📋 What topics are covered?</button>
+          <button class="chip" onclick="chipSend('Give me a summary of the key points')">📝 Summarise key points</button>
+          <button class="chip" onclick="chipSend('What is guidance and counselling?')">🎓 What is counselling?</button>
+          <button class="chip" onclick="chipSend('What are the main types of counselling?')">🔍 Types of counselling</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:800px;width:100%;margin:0 auto;padding:0 20px">
+      <div class="typing-wrap" id="typingWrap">
+        <div class="typing-row">
+          <div class="m-av bot-av">✨</div>
+          <div class="typing-bbl">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ibar">
+      <div class="ibar-inner">
+        <div class="iwrap">
+          <textarea id="msgIn" placeholder="Ask anything about your documents…" rows="1"></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="send()" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+      </div>
+      <div class="ibar-hint">Enter to send · Shift+Enter for new line</div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
