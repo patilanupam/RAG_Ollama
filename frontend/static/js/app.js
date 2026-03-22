@@ -1,7 +1,7 @@
 /* jshint esversion: 9 */
 'use strict';
 
-let selFiles = new Set(), uploadFiles = [], topK = 15, busy = false, selectedDocument = null;
+let selFiles = new Set(), uploadFiles = [], topK = 20, busy = false, selectedDocument = null;
 
 // ── Init ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDZ();
   setupSlider();
   setupInput();
+  loadChatHistory(); // Load previous conversation
 });
 
 // ── Theme ─────────────────────────────────────────────────────────
@@ -262,6 +263,7 @@ async function ingestURL() {
 async function clearAll() {
   if (!confirm('Clear all indexed documents and chat history?')) return;
   await fetch('/api/clear', { method: 'POST' });
+  localStorage.removeItem('chatHistory'); // Also clear localStorage
   document.getElementById('msgs').innerHTML = '';
   addEmptyState();
   refreshStatus();
@@ -391,6 +393,88 @@ function addMsg(role, content, sources = [], chunks = []) {
 
   msgs.insertAdjacentHTML('beforeend', html);
   scrollBottom();
+
+  // Save message to localStorage for persistence
+  saveChatMessage(role, content, sources, chunks, now);
+}
+
+// ── Chat History (localStorage) ───────────────────────────────────
+function saveChatMessage(role, content, sources, chunks, time) {
+  const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+  history.push({ role, content, sources, chunks, time, id: Date.now() });
+
+  // Keep last 100 messages to avoid localStorage size limits
+  if (history.length > 100) history.shift();
+
+  localStorage.setItem('chatHistory', JSON.stringify(history));
+}
+
+function loadChatHistory() {
+  const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+  const msgs = document.getElementById('msgs');
+
+  if (history.length === 0) {
+    addEmptyState();
+    return;
+  }
+
+  msgs.innerHTML = ''; // Clear empty state
+
+  history.forEach(msg => {
+    const isUser = msg.role === 'user';
+    const srcHtml = (!isUser && msg.sources && msg.sources.length) ? `
+      <button class="src-toggle" onclick="toggleSrc('${msg.id}')">
+        📚 ${msg.sources.length} source${msg.sources.length > 1 ? 's' : ''} · ${msg.chunks.length} chunk${msg.chunks.length !== 1 ? 's' : ''}
+      </button>
+      <div class="src-panel" id="sp${msg.id}">
+        <p class="sp-lbl">Citations</p>
+        ${msg.sources.map(s => `
+          <div class="src-item">
+            <div class="src-num">${s.index}</div>
+            <div class="src-info">
+              <div class="src-name">${s.source}</div>
+              <div class="src-sub">${s.page ? 'Page ' + s.page : ''}${s.score ? (s.page ? ' · ' : '') + (s.score * 100).toFixed(0) + '% match' : ''}</div>
+            </div>
+          </div>`).join('')}
+        ${msg.chunks && msg.chunks.length ? `
+          <p class="sp-lbl" style="margin-top:12px">Retrieved Chunks</p>
+          ${msg.chunks.map((c, i) => `
+            <div class="chunk-card">
+              <div class="ck-hdr">
+                <span class="ck-num">#${i + 1}</span>
+                <span class="ck-src">${c.source}${c.page ? ' · p.' + c.page : ''}</span>
+                <span class="ck-score">${c.score ? (c.score * 100).toFixed(0) + '%' : ''}</span>
+              </div>
+              <div class="ck-txt">${c.text}</div>
+            </div>`).join('')}` : ''}
+      </div>` : '';
+
+    const html = `
+    <div class="mrow ${isUser ? 'user' : 'bot'}" id="${msg.id}">
+      ${!isUser ? '<div class="m-av bot-av">✨</div>' : ''}
+      <div class="m-col">
+        <div class="bbl ${isUser ? 'user-bbl' : 'bot-bbl'}">${fmt(msg.content)}</div>
+        ${srcHtml}
+        <div class="m-meta">
+          <span>${msg.time}</span>
+          ${isUser ? '<span class="ticks">✓✓</span>' : ''}
+        </div>
+      </div>
+      ${isUser ? '<div class="m-av user-av">👤</div>' : ''}
+    </div>`;
+
+    msgs.insertAdjacentHTML('beforeend', html);
+  });
+
+  scrollBottom();
+}
+
+function clearChatHistory() {
+  if (!confirm('Clear chat history? (Documents will remain)')) return;
+  localStorage.removeItem('chatHistory');
+  document.getElementById('msgs').innerHTML = '';
+  addEmptyState();
+  toast('Chat history cleared', 'inf');
 }
 
 function addEmptyState() {

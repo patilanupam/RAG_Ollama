@@ -261,16 +261,73 @@ def chat(req: ChatReq):
                 "sources": [], "chunks": [],
             }
 
-        # Special handling for document summaries - retrieve more chunks
-        query_lower = req.message.lower()
-        is_summary = any(word in query_lower for word in ['summarize', 'summary', 'overview', 'tell me about this'])
+        query_lower = req.message.lower().strip()
 
-        # For summaries with document filter, retrieve more chunks
+        # Handle meta-queries that don't need semantic search
+        meta_queries = ['list', 'documents you have', 'what documents', 'which documents', 'show documents', 'available documents']
+        if any(q in query_lower for q in meta_queries) and ('document' in query_lower):
+            db = get_db()
+            docs = db.get_all_documents()
+            doc_list = "\n".join([f"{i+1}. **{doc['original_filename']}** ({doc['chunk_count']} chunks, {doc['file_type']})"
+                                  for i, doc in enumerate(docs)])
+            return {
+                "answer": f"## 📚 Uploaded Documents\n\nI have access to {len(docs)} documents:\n\n{doc_list}\n\n**Tip:** Use the document filter dropdown to search within a specific PDF for accurate results.",
+                "sources": [],
+                "chunks": []
+            }
+
+        # Detect "summarize all documents" - handle specially
+        summarize_all_queries = ['summarize all', 'summary of all', 'overview of all documents', 'all documents']
+        is_summarize_all = any(q in query_lower for q in summarize_all_queries)
+
+        if is_summarize_all:
+            db = get_db()
+            docs = db.get_all_documents()
+
+            # Create brief overview of each document
+            doc_summaries = []
+            for i, doc in enumerate(docs, 1):
+                doc_summaries.append(
+                    f"**{i}. {doc['original_filename']}**\n"
+                    f"   - Type: {doc['file_type']}\n"
+                    f"   - Size: {doc['chunk_count']} chunks\n"
+                    f"   - Uploaded: {doc['upload_date'][:10]}"
+                )
+
+            summaries_text = "\n\n".join(doc_summaries)
+
+            return {
+                "answer": f"I have {len(docs)} documents uploaded. For detailed summaries, please select one document at a time using the filter dropdown.\n\n## Document Library\n\n{summaries_text}\n\n**To get a summary:** Select a document from the filter dropdown above, then ask \"summarize this document\" or \"what topics are covered\".",
+                "sources": [],
+                "chunks": []
+            }
+
+        # Detect other broad cross-document queries
+        broad_queries = ['what topics', 'topics covered', 'what is covered', 'overview']
+        is_broad_query = any(q in query_lower for q in broad_queries) and not req.source_filter
+
+        if is_broad_query:
+            db = get_db()
+            docs = db.get_all_documents()
+            doc_list = "\n".join([f"{i+1}. {doc['original_filename']}" for i, doc in enumerate(docs)])
+            return {
+                "answer": f"Please select ONE document from the filter dropdown to get a focused answer.\n\n**Available documents:**\n{doc_list}\n\nAfter selecting a document, you can ask:\n- What topics are covered?\n- Give me an overview\n- Summarize this document",
+                "sources": [],
+                "chunks": []
+            }
+
+        # Special handling for document summaries - retrieve MORE chunks
+        is_summary = any(word in query_lower for word in ['summarize', 'summary', 'overview', 'tell me about', 'explain this document', 'what is this document'])
+
+        # For summaries with document filter, retrieve much more
         effective_k = req.top_k
         if is_summary and req.source_filter:
-            effective_k = min(req.top_k * 2, 30)  # Double the chunks for summaries, max 30
+            # Get as many chunks as possible from the filtered document
+            effective_k = min(50, collection_count())  # Up to 50 chunks for comprehensive summaries
+        elif is_summary:
+            effective_k = min(req.top_k * 3, 40)  # Triple for summaries without filter
 
-        chunks = retrieve(req.message, k=effective_k, source_filter=req.source_filter)
+        chunks = retrieve(req.message, k=effective_k, source_filter=req.source_filter, use_reranking=True)
         if not chunks:
             ans = "I couldn't find relevant information in your documents. Could you rephrase your question?"
             _chat_history += [{"role": "user", "content": req.message}, {"role": "assistant", "content": ans}]
@@ -279,6 +336,12 @@ def chat(req: ChatReq):
         # Check if results span multiple documents without filter
         if not req.source_filter and len(chunks) > 0:
             unique_sources = set(c["source"] for c in chunks)
+
+            # Log document diversity for debugging
+            from collections import Counter
+            source_counts = Counter(c["source"] for c in chunks)
+            print(f"[Retrieval] Query: '{req.message[:50]}...' | Retrieved from {len(unique_sources)} docs: {dict(source_counts)}")
+
             if len(unique_sources) > 1:
                 # Add a helpful note about using document filter
                 filter_hint = f"\n\n**💡 Tip:** Your results come from {len(unique_sources)} different documents. For more focused answers, use the document filter dropdown to search within a specific PDF."

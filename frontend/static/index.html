@@ -6,7 +6,7 @@
   <title>Ask Me Anything</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=4">
+  <link rel="stylesheet" href="/static/css/style.css?v=7">
 </head>
 <body>
 <div class="app">
@@ -65,16 +65,17 @@
             <div class="stat-lbl">Chunks indexed</div>
             <div class="stat-val" id="chunkCount">0</div>
           </div>
-          <button class="btn btn-danger" onclick="clearAll()">🗑 Clear</button>
+          <button class="btn btn-danger" onclick="clearAll()">🗑 Clear All</button>
         </div>
+        <button class="btn btn-primary" onclick="clearChatHistory()" style="width: 100%; margin-top: 8px; font-size: 13px; background: var(--text-secondary); opacity: 0.8;">💬 Clear Chat</button>
       </div>
 
       <div>
         <p class="sb-label">⚙️ Retrieval</p>
         <div class="slider-row">
           <label>Chunks to retrieve</label>
-          <input type="range" id="tkSlider" min="5" max="30" value="15" step="5">
-          <span class="slider-val" id="tkVal">15</span>
+          <input type="range" id="tkSlider" min="10" max="50" value="20" step="5">
+          <span class="slider-val" id="tkVal">20</span>
         </div>
         <div style="margin-top: 8px;">
           <label style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; display: block;">🎯 Filter by document</label>
@@ -146,6 +147,6 @@
 </div>
 
 <div class="toasts" id="toasts"></div>
-<script src="/static/js/app.js?v=4"></script>
+<script src="/static/js/app.js?v=7"></script>
 </body>
 </html>

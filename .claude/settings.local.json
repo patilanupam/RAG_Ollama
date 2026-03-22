@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(python -c \"import sys, json; d=json.load\\(sys.stdin\\); print\\(''''Answer preview:'''', d[''''answer''''][:500]\\)\")",
-      "Bash(python -c \"import sys, json; d=json.load\\(sys.stdin\\); sources = set\\(s[''''source''''] for s in d[''''sources'''']\\); print\\(f''''Sources: {len\\(sources\\)} documents''''\\); print\\(''''Last 200 chars:'''', d[''''answer''''][-200:]\\)\")"
+      "Bash(python -c \"import sys, json; d=json.load\\(sys.stdin\\); sources = set\\(s[''''source''''] for s in d[''''sources'''']\\); print\\(f''''Sources: {len\\(sources\\)} documents''''\\); print\\(''''Last 200 chars:'''', d[''''answer''''][-200:]\\)\")",
+      "Bash(python -c \"import sys, json; d=json.load\\(sys.stdin\\); from collections import Counter; sources = [s[''''source''''] for s in d.get\\(''''sources'''', []\\)]; print\\(''''Document distribution:''''\\); for doc, count in Counter\\(sources\\).items\\(\\): print\\(f''''  {doc}: {count} chunks''''\\)\")",
+      "Bash(python -c \"import sys, json; d=json.load\\(sys.stdin\\); print\\(d[''''answer'''']\\)\")",
+      "Bash(python -c \"import sys, json; d=json.load\\(sys.stdin\\); print\\(d[''''answer''''][:500]\\)\")"
     ]
   }
 }
