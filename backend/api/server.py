@@ -8,6 +8,7 @@ from pydantic import BaseModel
 import tempfile, os
 from pathlib import Path
 from dotenv import load_dotenv
+import ollama
 
 load_dotenv()
 
@@ -245,6 +246,47 @@ def list_sources():
         raise HTTPException(500, str(e))
 
 
+def classify_query_intent(query: str) -> str:
+    """
+    Use a fast LLM to classify the query intent.
+    Returns: 'DOCUMENT_META' or 'SEMANTIC_SEARCH'
+    """
+    classification_prompt = f"""You are a query classifier. Classify this query into ONE category.
+
+Query: "{query}"
+
+Categories:
+- DOCUMENT_META: User asking about the number of documents, list of documents, what files are uploaded, document count, etc.
+- SEMANTIC_SEARCH: User asking about content within documents, seeking information, asking questions that need document text
+
+Respond with ONLY ONE WORD - either "DOCUMENT_META" or "SEMANTIC_SEARCH".
+
+Classification:"""
+
+    try:
+        # Use fast 3B model for classification
+        response = ollama.generate(
+            model="llama3.2:3b",
+            prompt=classification_prompt,
+            options={"temperature": 0, "num_predict": 5}
+        )
+
+        result = response['response'].strip().upper()
+
+        # Extract just the classification if model added extra text
+        if "DOCUMENT_META" in result:
+            return "DOCUMENT_META"
+        elif "SEMANTIC_SEARCH" in result:
+            return "SEMANTIC_SEARCH"
+        else:
+            # Default to semantic search if unclear
+            return "SEMANTIC_SEARCH"
+
+    except Exception as e:
+        print(f"[Classification] Error: {e}, defaulting to SEMANTIC_SEARCH")
+        return "SEMANTIC_SEARCH"
+
+
 class ChatReq(BaseModel):
     message: str
     top_k: int = 5
@@ -263,15 +305,18 @@ def chat(req: ChatReq):
 
         query_lower = req.message.lower().strip()
 
-        # Handle meta-queries that don't need semantic search
-        meta_queries = ['list', 'documents you have', 'what documents', 'which documents', 'show documents', 'available documents']
-        if any(q in query_lower for q in meta_queries) and ('document' in query_lower):
+        # Use LLM-based classification for accurate query routing
+        query_intent = classify_query_intent(req.message)
+        print(f"[Query Classification] '{req.message}' -> {query_intent}")
+
+        # Handle document meta-queries (count, list, etc.)
+        if query_intent == "DOCUMENT_META":
             db = get_db()
             docs = db.get_all_documents()
             doc_list = "\n".join([f"{i+1}. **{doc['original_filename']}** ({doc['chunk_count']} chunks, {doc['file_type']})"
                                   for i, doc in enumerate(docs)])
             return {
-                "answer": f"## 📚 Uploaded Documents\n\nI have access to {len(docs)} documents:\n\n{doc_list}\n\n**Tip:** Use the document filter dropdown to search within a specific PDF for accurate results.",
+                "answer": f"## 📚 Uploaded Documents\n\nI have access to **{len(docs)} documents**:\n\n{doc_list}\n\n**Tip:** Use the document filter dropdown to search within a specific PDF for accurate results.",
                 "sources": [],
                 "chunks": []
             }
@@ -350,15 +395,21 @@ def chat(req: ChatReq):
         else:
             filter_hint = ""
 
-        result = generate_answer(req.message, chunks, history=_chat_history[-10:])
+        # Generate answer with context pruning (r/Rag best practice: last 10 turns max)
+        # Prune history BEFORE passing to avoid token limit issues
+        pruned_history = _chat_history[-10:] if len(_chat_history) > 10 else _chat_history
+        result = generate_answer(req.message, chunks, history=pruned_history)
 
-        # Append filter hint if applicable
-        if filter_hint:
-            result["answer"] += filter_hint
+        # Append to history and PRUNE (r/Rag: keep only last 10 turns to avoid token overflow)
         _chat_history += [
             {"role": "user", "content": req.message},
             {"role": "assistant", "content": result["answer"]},
         ]
+        
+        # Context pruning: Keep only last 10 conversation turns
+        if len(_chat_history) > 20:  # 20 messages = 10 turns (user + assistant)
+            _chat_history = _chat_history[-20:]
+        
         return {
             "answer": result["answer"],
             "sources": result["sources"],

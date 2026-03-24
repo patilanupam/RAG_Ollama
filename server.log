@@ -1,44 +1,62 @@
 INFO:     Will watch for changes in these directories: ['C:\\Users\\anupa\\OneDrive\\Documents\\RAG_Drive']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [35640] using WatchFiles
-INFO:     Started server process [36672]
+INFO:     Started reloader process [12276] using WatchFiles
+INFO:     Started server process [9384]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+[Config] Project root: C:\Users\anupa\OneDrive\Documents\RAG_Drive
+[Config] ChromaDB path: C:\Users\anupa\OneDrive\Documents\RAG_Drive\storage\chroma_db
 Document database initialized
-INFO:     127.0.0.1:62833 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62833 - "GET /api/files HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62833 - "GET /api/documents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57918 - "GET /api/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62833 - "GET /api/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62310 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62310 - "GET /api/files HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54631 - "GET /api/documents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62310 - "GET /api/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58615 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58615 - "GET /api/files HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58615 - "GET /api/documents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58615 - "GET /api/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64128 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64128 - "GET /api/files HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64128 - "GET /api/documents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64128 - "GET /api/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64128 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64128 - "GET /api/files HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50525 - "GET /api/documents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64128 - "GET /api/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58128 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58128 - "GET /static/css/style.css?v=2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65228 - "GET /static/js/app.js?v=2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58128 - "GET /api/files HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65228 - "GET /api/documents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59566 - "GET /api/status HTTP/1.1" 200 OK
-Advanced encoding /SymbolSetEncoding not implemented yet
-Advanced encoding /SymbolSetEncoding not implemented yet
-Advanced encoding /SymbolSetEncoding not implemented yet
-Advanced encoding /SymbolSetEncoding not implemented yet
-Advanced encoding /SymbolSetEncoding not implemented yet
-INFO:     127.0.0.1:63122 - "POST /api/ingest/file HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63122 - "POST /api/ingest/file HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63122 - "GET /api/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63122 - "GET /api/documents HTTP/1.1" 200 OK
-WARNING:  WatchFiles detected changes in 'backend\api\server.py'. Reloading...
+[VectorStore] Initializing ChromaDB at: C:\Users\anupa\OneDrive\Documents\RAG_Drive\storage\chroma_db
+[VectorStore] Collection 'rag_chunks' loaded with 546 chunks
+INFO:     127.0.0.1:61399 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61399 - "GET /api/files HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61399 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64097 - "GET /api/documents HTTP/1.1" 200 OK
+[Query Classification] 'how many documents do you have' -> DOCUMENT_META
+INFO:     127.0.0.1:54328 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60277 - "DELETE /api/documents/13 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60855 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60277 - "GET /api/documents HTTP/1.1" 200 OK
+[Query Classification] 'how many documents do you have' -> DOCUMENT_META
+INFO:     127.0.0.1:60704 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55825 - "POST /api/ingest/file HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:54229 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /api/documents HTTP/1.1" 200 OK
+[Query Classification] 'how many times isreael is mentioned' -> SEMANTIC_SEARCH
+[Retrieval] Query: 'how many times isreael is mentioned...' | Retrieved from 3 docs: {'EDCN-805E-Guidance _ Counselling in Education.pdf': 8, '22899_India_in_Business.pdf': 6, '2024-wttc-introduction-to-ai.pdf': 6}
+[Query Classification] 'explain the conflict between Iran and Israel' -> SEMANTIC_SEARCH
+[Retrieval] Query: 'explain the conflict between Iran and Israel...' | Retrieved from 3 docs: {'Simon Tanios- Iran, Israel, the Persian Gulf, and the United States _A Conflict Resolution Perspective.pdf': 2, 'EDCN-805E-Guidance _ Counselling in Education.pdf': 2, '22899_India_in_Business.pdf': 1}
+INFO:     127.0.0.1:62921 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64516 - "POST /api/chat HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'backend\core\rag\generator.py'. Reloading...
+INFO:     127.0.0.1:51034 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51034 - "GET /static/css/style.css?v=7 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51034 - "GET /static/js/app.js?v=7 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63585 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51034 - "GET /api/files HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63346 - "GET /api/documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62354 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62354 - "GET /static/css/style.css?v=7 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62354 - "GET /static/js/app.js?v=7 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62354 - "GET /api/files HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62354 - "GET /api/documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62354 - "GET /api/status HTTP/1.1" 200 OK
+[Query Classification] 'how many docs' -> DOCUMENT_META
+INFO:     127.0.0.1:63701 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55308 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55308 - "GET /api/files HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55308 - "GET /api/documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55308 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50199 - "DELETE /api/documents/14 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50512 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50199 - "GET /api/documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51176 - "GET / HTTP/1.1" 200 OK
+[Query Classification] 'how many docs' -> DOCUMENT_META
+INFO:     127.0.0.1:51216 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51216 - "GET /api/files HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51216 - "GET /api/documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51216 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53533 - "DELETE /api/documents/15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61428 - "GET /api/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53533 - "GET /api/documents HTTP/1.1" 200 OK

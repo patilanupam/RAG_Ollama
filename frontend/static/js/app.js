@@ -209,7 +209,10 @@ async function ingestSelected() {
       `<div class="pi spin" id="${id}">
         <span class="pi-ico">⏳</span>
         <span class="pi-name">${name}</span>
-        <span class="pi-st">Processing…</span>
+        <span class="pi-st">Uploading...</span>
+        <div class="pi-bar" style="display:none">
+          <div class="pi-bar-fill" style="width:0%"></div>
+        </div>
       </div>`);
     try {
       let res;
@@ -220,7 +223,28 @@ async function ingestSelected() {
         });
       } else {
         const fd = new FormData(); fd.append('file', s.file);
-        res = await fetch('/api/ingest/file', { method: 'POST', body: fd });
+        const pi = document.getElementById(id);
+        
+        // Show progress bar for file uploads
+        if (s.file.size > 5000000) { // > 5MB files show progress
+          const barEl = pi.querySelector('.pi-bar');
+          const fillEl = pi.querySelector('.pi-bar-fill');
+          barEl.style.display = 'block';
+          
+          // Simulate progress (actual backend processing time)
+          let progress = 0;
+          const interval = setInterval(() => {
+            progress = Math.min(progress + 5, 90); // Max 90% until done
+            fillEl.style.width = progress + '%';
+            pi.querySelector('.pi-st').textContent = `Processing... ${progress}%`;
+          }, 500);
+          
+          res = await fetch('/api/ingest/file', { method: 'POST', body: fd });
+          clearInterval(interval);
+          fillEl.style.width = '100%';
+        } else {
+          res = await fetch('/api/ingest/file', { method: 'POST', body: fd });
+        }
       }
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Failed');

@@ -7,10 +7,16 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-# Paths (relative to project root)
-DATA_DIR = Path("./storage/data")
-CHROMA_DIR = Path("./storage/chroma_db")
-LOGS_DIR = Path("./storage/logs")
+# Get absolute project root (parent of backend/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+print(f"[Config] Project root: {PROJECT_ROOT}")
+
+# Paths (absolute, anchored to project root)
+DATA_DIR = PROJECT_ROOT / "storage" / "data"
+CHROMA_DIR = PROJECT_ROOT / "storage" / "chroma_db"
+LOGS_DIR = PROJECT_ROOT / "storage" / "logs"
+
+print(f"[Config] ChromaDB path: {CHROMA_DIR}")
 
 # Ensure directories exist
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -19,7 +25,7 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Ollama Configuration
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "deepseek-v3.1:671b-cloud")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:32b")
 OLLAMA_EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
 
 # Chunking Configuration
